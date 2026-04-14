@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>💳 Finanzas</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{
+    margin:0;
+    font-family: Arial, sans-serif;
+    background:#0a1f44;
+    color:#e6f0ff;
+}
+
+.container{
+    max-width:420px;
+    margin:20px auto;
+    background:#102a5c;
+    padding:20px;
+    border-radius:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.6);
+}
+
+h2{
+    text-align:center;
+}
+
+.balance{
+    text-align:center;
+    font-size:24px;
+    margin:10px 0;
+    font-weight:bold;
+}
+
+input, select, button{
+    padding:10px;
+    margin:5px 0;
+    width:100%;
+    border-radius:10px;
+    border:none;
+}
+
+input{
+    background:#0a1f44;
+    color:white;
+}
+
+button{
+    background:#009ee3;
+    color:white;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#007bb5;
+}
+
+.lista{
+    max-height:220px;
+    overflow:auto;
+    margin-top:10px;
+}
+
+.item{
+    border-bottom:1px solid #1e3a8a;
+    padding:8px;
+}
+
+.top{
+    display:flex;
+    justify-content:space-between;
+}
+
+.ingreso{ color:#00e676; }
+.gasto{ color:#ff5252; }
+
+.fecha{
+    font-size:12px;
+    color:#9fb3d1;
+}
+
+.delete{
+    cursor:pointer;
+}
+
+canvas{
+    margin-top:20px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>💳 Finanzas</h2>
+    <div class="balance" id="balance">$0</div>
+
+    <form id="form">
+        <input type="text" id="desc" placeholder="Ej: Compra supermercado" required>
+        <input type="number" id="monto" placeholder="Monto" required>
+        
+        <select id="tipo">
+            <option value="ingreso">Ingreso</option>
+            <option value="gasto">Gasto</option>
+        </select>
+
+        <button>Agregar</button>
+    </form>
+
+    <canvas id="chart"></canvas>
+
+    <div class="lista" id="lista"></div>
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem("data")) || [];
+
+const lista = document.getElementById("lista");
+const balance = document.getElementById("balance");
+let chart;
+
+function guardar(){
+    localStorage.setItem("data", JSON.stringify(data));
+}
+
+function formatearFecha(fecha){
+    return new Date(fecha).toLocaleDateString();
+}
+
+function actualizar(){
+    lista.innerHTML="";
+    let total=0;
+
+    data.forEach((item,i)=>{
+        const div=document.createElement("div");
+        div.className="item";
+
+        div.innerHTML=`
+            <div class="top">
+                <span class="${item.tipo}">$${item.monto}</span>
+                <span class="delete" onclick="del(${i})">❌</span>
+            </div>
+            <div>${item.desc}</div>
+            <div class="fecha">${formatearFecha(item.fecha)}</div>
+        `;
+
+        lista.appendChild(div);
+
+        total += item.tipo==="ingreso" ? item.monto : -item.monto;
+    });
+
+    balance.textContent = "$"+total;
+    actualizarGrafica();
+}
+
+function del(i){
+    data.splice(i,1);
+    guardar();
+    actualizar();
+}
+
+document.getElementById("form").addEventListener("submit",e=>{
+    e.preventDefault();
+
+    const item={
+        desc: desc.value,
+        monto: parseFloat(monto.value),
+        tipo: tipo.value,
+        fecha: new Date().toISOString()
+    };
+
+    data.push(item);
+    guardar();
+    actualizar();
+    form.reset();
+});
+
+function actualizarGrafica(){
+    let ingresos=0, gastos=0;
+
+    data.forEach(item=>{
+        if(item.tipo==="ingreso") ingresos+=item.monto;
+        else gastos+=item.monto;
+    });
+
+    if(chart) chart.destroy();
+
+    chart=new Chart(document.getElementById("chart"),{
+        type:"doughnut",
+        data:{
+            labels:["Ingresos","Gastos"],
+            datasets:[{
+                data:[ingresos,gastos],
+                backgroundColor:["#00e676","#ff5252"],
+                borderWidth:0
+            }]
+        },
+        options:{
+            plugins:{
+                legend:{
+                    labels:{ color:"#e6f0ff" }
+                }
+            }
+        }
+    });
+}
+
+actualizar();
+</script>
+
+</body>
+</html>
